@@ -57,10 +57,8 @@
   .c.sun .dn{color:var(--red)}
   .c.sat .dn{color:#7c9cfc}
   .c.weekend{opacity:.25;cursor:default;pointer-events:none}
-  .hlbl{font-size:7px;color:var(--red);line-height:1;text-align:center;padding:0 2px;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
   .dots{display:flex;gap:2px;margin-top:2px;min-height:5px}
   .dot{width:4px;height:4px;border-radius:50%}
-  .dot-custom{background:var(--orange,#f8a94b)}
 
   /* ── Summary ── */
   .sum{display:flex;padding:10px 18px;gap:8px;margin-top:6px}
@@ -93,7 +91,7 @@
   .esub{font-size:11px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace;line-height:1.7}
   .etag{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap}
   
-  /* 鬧鐘加進行事曆按鈕 */
+  /* 鬧鐘按鈕 */
   .alarm-btn{background:none;border:none;color:var(--muted);font-size:15px;cursor:pointer;padding:6px;line-height:1;align-self:center;transition:color .15s}
   .alarm-btn:hover, .alarm-btn:active{color:#ffb703}
 
@@ -152,7 +150,6 @@
   .cev-del:active{color:var(--red)}
 
   .sheet-close{position:absolute;top:14px;right:20px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);width:28px;height:28px;border-radius:50%;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-
   .bot{height:40px}
 
   /* ── Disclaimer modal ── */
@@ -273,7 +270,7 @@
 
 <script>
 // ══════════════════════════════════════════
-// 作三休三：起算 2/19
+// 核心設定與資料排班
 // ══════════════════════════════════════════
 const START = new Date(2026, 1, 19);
 
@@ -307,9 +304,6 @@ function isOverridden(m, d) {
   return `${m}-${d}` in overrides;
 }
 
-// ══════════════════════════════════════════
-// 課程資料
-// ══════════════════════════════════════════
 const HOLIDAYS = {'4-6':'清明節','4-7':'清明節補假','5-1':'勞動節'};
 const COURSES = {
   '2-23':[{n:'邏輯與思考（人文）',t:'08:10–12:00',r:'29-0404'},{n:'統計分析',t:'13:10–17:00',r:'03B0704'}],
@@ -352,11 +346,10 @@ const today=new Date();
 let curM=today.getMonth()+1, sel=null;
 
 // ══════════════════════════════════════════
-// 鬧鐘行事曆功能：自動產生通用 ICS 格式（含提前 15 分鐘響鈴鬧鐘）
+// 鬧鐘行事曆 ICS 匯出功能
 // ══════════════════════════════════════════
 function addAlarmToCalendar(title, timeStr, room, m, d) {
   let startHour = 8, startMin = 0, endHour = 17, endMin = 0;
-  
   if (timeStr && timeStr.includes('–')) {
     const parts = timeStr.split('–');
     const sParts = parts[0].split(':');
@@ -365,97 +358,55 @@ function addAlarmToCalendar(title, timeStr, room, m, d) {
     if(eParts.length === 2) { endHour = parseInt(eParts[0]); endMin = parseInt(eParts[1]); }
   } else if (title.includes('正常出勤')) {
     startHour = 7; startMin = 35; endHour = 19; endMin = 35;
-  } else {
-    // 沒時間的單純提醒（例如全天事件）
-    startHour = 8; startMin = 0; endHour = 18; endMin = 0;
   }
-
   const pad = num => String(num).padStart(2, '0');
   const dateStr = `2026${pad(m)}${pad(d)}`;
-  
   const icsDSTAMP = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
   const icsSTART = `${dateStr}T${pad(startHour)}${pad(startMin)}00`;
   const icsEND = `${dateStr}T${pad(endHour)}${pad(endMin)}00`;
 
-  // 建立符合國際標準包含鬧鐘提醒(VALARM)的 ICS 內容
   const icsContent = [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'PRODID:-//OSE CSU Calendar//Alarm Event//TW',
-    'CALSCALE:GREGORIAN',
-    'BEGIN:VEVENT',
-    `DTSTAMP:${icsDSTAMP}`,
-    `DTSTART;TZID=Asia/Taipei:${icsSTART}`,
-    `DTEND;TZID=Asia/Taipei:${icsEND}`,
-    `SUMMARY:${title}`,
-    `LOCATION:${room || '華泰電子 / 學校教室'}`,
-    'DESCRIPTION:此行程由產學攜手日曆自動同步，內含鬧鐘提醒。',
-    'BEGIN:VALARM',
-    'ACTION:DISPLAY',
-    'DESCRIPTION:REMINDER',
-    'TRIGGER:-PT15M', // 提前 15 分鐘觸發鬧鐘響鈴
-    'END:VALARM',
-    'END:VEVENT',
-    'END:VCALENDAR'
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//OSE CSU Calendar//Alarm//TW', 'CALSCALE:GREGORIAN', 'BEGIN:VEVENT',
+    `DTSTAMP:${icsDSTAMP}`, `DTSTART;TZID=Asia/Taipei:${icsSTART}`, `DTEND;TZID=Asia/Taipei:${icsEND}`,
+    `SUMMARY:${title}`, `LOCATION:${room || '華泰電子 / 學校教室'}`, 'DESCRIPTION:日曆自動同步，內含前 15 分鐘鬧鐘提醒。',
+    'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:REMINDER', 'TRIGGER:-PT15M', 'END:VALARM',
+    'END:VEVENT', 'END:VCALENDAR'
   ].join('\r\n');
 
-  // 下載行事曆檔案
   const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8;' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.setAttribute('download', `${m}月${d}日_${title.replace(/\s+/g, '_')}_鬧鐘提醒.ics`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  link.setAttribute('download', `${m}月${d}日_${title}_鬧鐘提醒.ics`);
+  document.body.appendChild(link); link.click(); document.body.removeChild(link);
 }
 
 // ══════════════════════════════════════════
-// 農民曆演算法
+// 農民曆宜忌演算法
 // ══════════════════════════════════════════
 const YI_LIST = ['開市', '嫁娶', '動土', '出行', '祈福', '納財', '安床', '祭祀', '沐浴', '理髮', '掃舍', '入宅', '修造', '裁衣', '交易'];
 const JI_LIST = ['諸事不宜', '作灶', '安葬', '伐木', '詞訟', '針灸', '掘井', '搬家', '破土', '動土', '移徙', '出火', '詞訟', '探病', '修造'];
 
 function getLunarFortune(m, d) {
   let seed = 2026 * m + d * 31;
-  function random() {
-    let x = Math.sin(seed++) * 10000;
-    return x - Math.floor(x);
-  }
-  let yiCount = Math.floor(random() * 3) + 2;
-  let jiCount = Math.floor(random() * 3) + 2;
-  let yiArr = [], jiArr = [];
-  let tempYi = [...YI_LIST], tempJi = [...JI_LIST];
-  for(let i=0; i<yiCount; i++) {
-    let idx = Math.floor(random() * tempYi.length);
-    yiArr.push(tempYi.splice(idx, 1)[0]);
-  }
-  for(let i=0; i<jiCount; i++) {
-    let idx = Math.floor(random() * tempJi.length);
-    jiArr.push(tempJi.splice(idx, 1)[0]);
-  }
+  function random() { let x = Math.sin(seed++) * 10000; return x - Math.floor(x); }
+  let yiCount = Math.floor(random() * 3) + 2, jiCount = Math.floor(random() * 3) + 2;
+  let yiArr = [], jiArr = [], tempYi = [...YI_LIST], tempJi = [...JI_LIST];
+  for(let i=0; i<yiCount; i++) { yiArr.push(tempYi.splice(Math.floor(random() * tempYi.length), 1)[0]); }
+  for(let i=0; i<jiCount; i++) { jiArr.push(tempJi.splice(Math.floor(random() * tempJi.length), 1)[0]); }
   if(jiArr.includes('諸事不宜')) jiArr = ['諸事不宜'];
   return { yi: yiArr.join('、'), ji: jiArr.join('、') };
 }
 
 function renderLunar(m, d) {
-  const box = document.getElementById('lunar-box');
-  if(!box) return;
-  box.style.display = 'flex';
-  const fortune = getLunarFortune(m, d);
+  const box = document.getElementById('lunar-box'); if(!box) return;
+  box.style.display = 'flex'; const f = getLunarFortune(m, d);
   box.innerHTML = `
-    <div class="lunar-row">
-      <span class="lunar-tag yi">宜</span>
-      <span class="lunar-text">${fortune.yi}</span>
-    </div>
-    <div class="lunar-row">
-      <span class="lunar-tag ji">忌</span>
-      <span class="lunar-text">${fortune.ji}</span>
-    </div>
-  `;
+    <div class="lunar-row"><span class="lunar-tag yi">宜</span><span class="lunar-text">${f.yi}</span></div>
+    <div class="lunar-row"><span class="lunar-tag ji">忌</span><span class="lunar-text">${f.ji}</span></div>`;
 }
 
 // ══════════════════════════════════════════
-// 天氣：Open-Meteo API
+// 高雄即時天氣 API
 // ══════════════════════════════════════════
 const WEATHER_CACHE = {};
 const WMO_CODE = {
@@ -466,45 +417,38 @@ const WMO_CODE = {
 };
 
 async function fetchWeather(m, d){
-  const key = `${m}-${d}`;
-  if(WEATHER_CACHE[key]) return WEATHER_CACHE[key];
-  const date = `2026-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  const key = `${m}-${d}`; if(WEATHER_CACHE[key]) return WEATHER_CACHE[key];
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=22.63&longitude=120.27&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Asia%2FTaipei&start_date=${date}&end_date=${date}`;
-    const res = await fetch(url);
-    if(!res.ok) return null;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=22.63&longitude=120.27&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code&timezone=Asia%2FTaipei`;
+    const res = await fetch(url); if(!res.ok) return null;
     const data = await res.json();
-    if(data.daily && data.daily.time && data.daily.time.length > 0){
-      const result = {
-        code: data.daily.weathercode[0],
-        max: Math.round(data.daily.temperature_2m_max[0]),
-        min: Math.round(data.daily.temperature_2m_min[0]),
-        rain: data.daily.precipitation_sum[0],
-      };
-      WEATHER_CACHE[key] = result;
-      return result;
+    if(data.current){
+      const result = { code: data.current.weather_code, temp: Math.round(data.current.temperature_2m), feel: Math.round(data.current.apparent_temperature), humidity: data.current.relative_humidity_2m };
+      WEATHER_CACHE[key] = result; return result;
     }
   } catch(e) {}
   return null;
 }
 
 function renderWeather(m, d){
-  const bar = document.getElementById('weather-bar');
-  if(!bar) return;
-  bar.innerHTML = '<div class="weather-loading">🌐 載入天氣中...</div>';
+  const bar = document.getElementById('weather-bar'); if(!bar) return;
+  bar.innerHTML = '<div class="weather-loading">🌐 載入即時天氣中...</div>';
   fetchWeather(m, d).then(w => {
     if(!w){ bar.innerHTML=''; return; }
     const desc = WMO_CODE[w.code] || '🌡️ 未知';
     bar.innerHTML = `<div class="weather-bar">
       <div class="weather-icon">${desc.split(' ')[0]}</div>
       <div class="weather-info">
-        <div class="weather-temp">${w.max}° / ${w.min}°C</div>
-        <div class="weather-desc">${desc.split(' ').slice(1).join(' ')} ｜ 降雨 ${w.rain} mm ｜ 高雄</div>
+        <div class="weather-temp">現在溫度 ${w.temp}°C ｜ 體感 ${w.feel}°C</div>
+        <div class="weather-desc">${desc.split(' ').slice(1).join(' ')} ｜ 濕度 ${w.humidity}% ｜ 高雄即時天氣</div>
       </div>
     </div>`;
   });
 }
 
+// ══════════════════════════════════════════
+// 畫面渲染主邏輯 (修正完畢)
+// ══════════════════════════════════════════
 function render(){
   document.getElementById('mname').textContent=MN[curM-1];
   renderCal(); renderSum();
@@ -512,69 +456,46 @@ function render(){
 }
 
 function renderCal(){
-  const cal=document.getElementById('cal');
-  cal.innerHTML='';
+  const cal=document.getElementById('cal'); cal.innerHTML='';
   const first=new Date(2026,curM-1,1).getDay();
   const total=new Date(2026,curM,0).getDate();
 
-  for(let i=0;i<first;i++){
-    const e=document.createElement('div');e.className='c empty';cal.appendChild(e);
-  }
+  for(let i=0;i<first;i++){ const e=document.createElement('div'); e.className='c empty'; cal.appendChild(e); }
 
   for(let d=1;d<=total;d++){
-    const dow=new Date(2026,curM-1,d).getDay();
-    const isSun=dow===0,isSat=dow===6;
-    const st=status(curM,d);
-    const ov=isOverridden(curM,d);
-    const courses=(COURSES[`${curM}-${d}`]||[]);
-    const cevs=customEvs[`${curM}-${d}`]||[];
+    const dow=new Date(2026,curM-1,d).getDay(), isSun=dow===0, isSat=dow===6;
+    const st=status(curM,d), ov=isOverridden(curM,d);
+    const courses=(COURSES[`${curM}-${d}`]||[]), cevs=customEvs[`${curM}-${d}`]||[];
     const isToday=today.getFullYear()===2026&&today.getMonth()+1===curM&&today.getDate()===d;
+    const cell=document.createElement('div'); let cls='c';
 
-    const cell=document.createElement('div');
-    let cls='c';
-
-    if(ov){
-      cls += st==='work' ? ' override-work' : ' override-rest';
-    } else if(courses.length>0 && st==='rest'){
-      cls+=' school';
-    } else if(st==='rest'){
-      cls+=' rest';
-    } else {
-      cls+=' work';
-    }
+    if(ov){ cls += st==='work' ? ' override-work' : ' override-rest'; }
+    else if(courses.length>0 && st==='rest'){ cls+=' school'; }
+    else if(st==='rest'){ cls+=' rest'; }
+    else { cls+=' work'; }
 
     if(HOLIDAYS[`${curM}-${d}`]) cls+=' holiday';
     if(isToday) cls+=' today';
-    if(isSun) cls+=' sun';
-    if(isSat) cls+=' sat';
+    if(isSun) cls+=' sun'; if(isSat) cls+=' sat';
     if(sel===d) cls+=' sel';
     cell.className=cls;
 
-    const dn=document.createElement('div');dn.className='dn';dn.textContent=d;
-    cell.appendChild(dn);
+    const dn=document.createElement('div'); dn.className='dn'; dn.textContent=d; cell.appendChild(dn);
 
     if(courses.length>0||cevs.length>0){
-      const dots=document.createElement('div');dots.className='dots';
-      if(courses.length>0){
-        const dot=document.createElement('div');dot.className='dot';
-        dot.style.background='var(--work)';dots.appendChild(dot);
-      }
-      if(cevs.length>0){
-        const dot=document.createElement('div');dot.className='dot';
-        dot.style.background='#f8a94b';dots.appendChild(dot);
-      }
+      const dots=document.createElement('div'); dots.className='dots';
+      if(courses.length>0){ const dot=document.createElement('div'); dot.className='dot'; dot.style.background='var(--work)'; dots.appendChild(dot); }
+      if(cevs.length>0){ const dot=document.createElement('div'); dot.className='dot'; dot.style.background='#f8a94b'; dots.appendChild(dot); }
       cell.appendChild(dots);
     }
-
-    cell.addEventListener('click',()=>{sel=d;render();});
-    cal.appendChild(cell);
+    cell.addEventListener('click',()=>{sel=d; render();}); cal.appendChild(cell);
   }
 }
 
 function renderSum(){
   const total=new Date(2026,curM,0).getDate();
-  let work=0,rest=0,school=0;
-  for(let d=1;d<=total;d++){
+  let work=0, rest=0, school=0;
+  for(let d=1; d<=total; d++){
     if(status(curM,d)==='work') work++; else rest++;
     const dow=new Date(2026,curM-1,d).getDay();
     if(!(dow===0||dow===6)&&(COURSES[`${curM}-${d}`]||[]).length>0) school++;
@@ -582,25 +503,17 @@ function renderSum(){
   document.getElementById('sum').innerHTML=`
     <div class="chip"><div class="cn" style="color:var(--work)">${work}</div><div class="cl">上班天</div></div>
     <div class="chip"><div class="cn" style="color:var(--rest)">${rest}</div><div class="cl">休息天</div></div>
-    <div class="chip"><div class="cn" style="color:var(--school)">${school}</div><div class="cl">上課天</div></div>
-  `;
+    <div class="chip"><div class="cn" style="color:var(--school)">${school}</div><div class="cl">上課天</div></div>`;
 }
 
 function showEv(d){
-  const dow=new Date(2026,curM-1,d).getDay();
-  const st=status(curM,d);
-  const ov=isOverridden(curM,d);
-  const courses=(COURSES[`${curM}-${d}`]||[]);
-  const cevs=customEvs[`${curM}-${d}`]||[];
-
+  const dow=new Date(2026,curM-1,d).getDay(), st=status(curM,d), ov=isOverridden(curM,d);
+  const courses=(COURSES[`${curM}-${d}`]||[]), cevs=customEvs[`${curM}-${d}`]||[];
   document.getElementById('pdate').textContent=`${curM}月${d}日（${DN[dow]}）`;
   document.getElementById('editBtn').style.display='block';
 
-  const evs=[];
-  const hday=HOLIDAYS[`${curM}-${d}`];
-  if(hday){
-    evs.push({name:'🎌 '+hday, sub:'國定假日・請確認是否照常上課', color:'#f0c800', tag:'節日', tbg:'rgba(255,200,0,.15)', tc:'#c8a000', rawTime:'', rawRoom:'', hasAlarm:false});
-  }
+  const evs=[]; const hday=HOLIDAYS[`${curM}-${d}`];
+  if(hday){ evs.push({name:'🎌 '+hday, sub:'國定假日・請確認是否照常上課', color:'#f0c800', tag:'節日', tbg:'rgba(255,200,0,.15)', tc:'#c8a000', rawTime:'', rawRoom:'', hasAlarm:false}); }
 
   if(st==='work'){
     const sub = ov ? '⚠️ 手動設定上班' : '07:35–19:35 ｜ 華泰電子 F組';
@@ -611,160 +524,85 @@ function showEv(d){
   }
 
   courses.forEach(c=>{
-    if(c.n.startsWith('⚠️')){
-      evs.push({name:c.n, sub:'', color:'#f8a94b', tag:'提醒', tbg:'rgba(248,169,75,.15)', tc:'#f8a94b', rawTime:'', rawRoom:'', hasAlarm:false});
-    } else {
-      evs.push({name:c.n, sub:`${c.t} ｜ ${c.r}`, color:'var(--work)', tag:'課程', tbg:'rgba(74,144,217,.15)', tc:'var(--work)', rawTime:c.t, rawRoom:c.r, hasAlarm:true});
-    }
+    if(c.n.startsWith('⚠️')){ evs.push({name:c.n, sub:'', color:'#f8a94b', tag:'提醒', tbg:'rgba(248,169,75,.15)', tc:'#f8a94b', rawTime:'', rawRoom:'', hasAlarm:false}); }
+    else { evs.push({name:c.n, sub:`${c.t} ｜ ${c.r}`, color:'var(--work)', tag:'課程', tbg:'rgba(74,144,217,.15)', tc:'var(--work)', rawTime:c.t, rawRoom:c.r, hasAlarm:true}); }
   });
 
-  cevs.forEach(c=>{
-    evs.push({name:c.n, sub:`${c.t||'–'} ｜ ${c.r||'–'}`, color:'#f8a94b', tag:'自訂', tbg:'rgba(248,169,75,.15)', tc:'#f8a94b', del:c.id, rawTime:c.t, rawRoom:c.r, hasAlarm:true});
-  });
+  cevs.forEach(c=>{ evs.push({name:c.n, sub:`${c.t||'–'} ｜ ${c.r||'–'}`, color:'#f8a94b', tag:'自訂', tbg:'rgba(248,169,75,.15)', tc:'#f8a94b', del:c.id, rawTime:c.t, rawRoom:c.r, hasAlarm:true}); });
 
   document.getElementById('pcnt').textContent=`${evs.length} 項`;
-  renderWeather(curM, d);
-  renderLunar(curM, d);
+  renderWeather(curM, d); renderLunar(curM, d);
   
   document.getElementById('evs').innerHTML=evs.map(ev=>`
     <div class="ev">
       <div class="ebar" style="background:${ev.color}"></div>
-      <div class="einfo">
-        <div class="ename">${ev.name}</div>
-        <div class="esub">${ev.sub}</div>
-      </div>
+      <div class="einfo"><div class="ename">${ev.name}</div><div class="esub">${ev.sub}</div></div>
       <div style="display:flex;align-items:center;gap:4px">
         <div class="etag" style="background:${ev.tbg};color:${ev.tc}">${ev.tag}</div>
         ${ev.hasAlarm ? `<button class="alarm-btn" title="設定手機鬧鐘提醒" onclick="addAlarmToCalendar('${ev.name}', '${ev.rawTime}', '${ev.rawRoom}', ${curM}, ${d})">⏰</button>` : ''}
         ${ev.del ? `<button class="del-btn" onclick="deleteCustomEv('${ev.del}')">×</button>` : ''}
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
 function deleteCustomEv(id){
-  if(!sel) return;
-  const key=`${curM}-${sel}`;
-  if(customEvs[key]) {
-    customEvs[key]=customEvs[key].filter(e=>e.id!==id);
-    if(customEvs[key].length===0) delete customEvs[key];
-    saveAll(); render();
-  }
+  if(!sel) return; const key=`${curM}-${sel}`;
+  if(customEvs[key]) { customEvs[key]=customEvs[key].filter(e=>e.id!==id); if(customEvs[key].length===0) delete customEvs[key]; saveAll(); render(); }
 }
 
 function resetPanel(){
-  document.getElementById('pdate').textContent='請點選日期';
-  document.getElementById('pcnt').textContent='';
+  document.getElementById('pdate').textContent='請點選日期'; document.getElementById('pcnt').textContent='';
   document.getElementById('evs').innerHTML='<div class="nomsg">點選日期查看行程</div>';
-  document.getElementById('weather-bar').innerHTML='';
-  document.getElementById('lunar-box').style.display='none';
-  document.getElementById('editBtn').style.display='none';
+  document.getElementById('weather-bar').innerHTML=''; document.getElementById('lunar-box').style.display='none'; document.getElementById('editBtn').style.display='none';
 }
 
-function go(delta){
-  curM=Math.max(1,Math.min(12,curM+delta));
-  sel=null;resetPanel();render();
-}
+function go(delta){ curM=Math.max(1,Math.min(12,curM+delta)); sel=null; resetPanel(); render(); }
 
 // ══════════════════════════════════════════
-// Bottom sheet
+// 彈出式面板邏輯
 // ══════════════════════════════════════════
 function openSheet(){
-  if(sel===null) return;
-  const dow=new Date(2026,curM-1,sel).getDay();
+  if(sel===null) return; const dow=new Date(2026,curM-1,sel).getDay();
   document.getElementById('sheetDate').textContent=`${curM}月${sel}日（${DN[dow]}）`;
-  updateToggleUI();
-  renderSheetCustomEvs();
-  document.getElementById('fName').value='';
-  document.getElementById('fTime').value='';
-  document.getElementById('fRoom').value='';
-  document.getElementById('overlay').classList.add('show');
-  document.getElementById('sheet').classList.add('show');
+  updateToggleUI(); renderSheetCustomEvs();
+  document.getElementById('fName').value=''; document.getElementById('fTime').value=''; document.getElementById('fRoom').value='';
+  document.getElementById('overlay').classList.add('show'); document.getElementById('sheet').classList.add('show');
 }
 
-function closeSheet(){
-  document.getElementById('overlay').classList.remove('show');
-  document.getElementById('sheet').classList.remove('show');
-  render();
-}
-
+function closeSheet(){ document.getElementById('overlay').classList.remove('show'); document.getElementById('sheet').classList.remove('show'); render(); }
 function updateToggleUI(){
-  const st=status(curM,sel);
-  const ow=document.getElementById('optWork');
-  const or=document.getElementById('optRest');
-  ow.className='toggle-opt'+(st==='work'?' active-work':'');
-  or.className='toggle-opt'+(st==='rest'?' active-rest':'');
+  const st=status(curM,sel); const ow=document.getElementById('optWork'); const or=document.getElementById('optRest');
+  ow.className='toggle-opt'+(st==='work'?' active-work':''); or.className='toggle-opt'+(st==='rest'?' active-rest':'');
 }
-
-function setOverride(val){
-  if(sel===null) return;
-  overrides[`${curM}-${sel}`]=val;
-  saveAll();
-  updateToggleUI();
-}
-
-function resetOverride(){
-  if(sel===null) return;
-  delete overrides[`${curM}-${sel}`];
-  saveAll();
-  updateToggleUI();
-}
+function setOverride(val){ if(sel===null) return; overrides[`${curM}-${sel}`]=val; saveAll(); updateToggleUI(); }
+function resetOverride(){ if(sel===null) return; delete overrides[`${curM}-${sel}`]; saveAll(); updateToggleUI(); }
 
 function renderSheetCustomEvs(){
-  const cevs=customEvs[`${curM}-${sel}`]||[];
-  const el=document.getElementById('customEvList');
-  if(cevs.length===0){
-    el.innerHTML='<div style="font-size:12px;color:var(--muted);padding:4px 0">尚無自訂事件</div>';
-    return;
-  }
+  const cevs=customEvs[`${curM}-${sel}`]||[]; const el=document.getElementById('customEvList');
+  if(cevs.length===0){ el.innerHTML='<div style="font-size:12px;color:var(--muted);padding:4px 0">尚無自訂事件</div>'; return; }
   el.innerHTML=cevs.map(c=>`
     <div class="custom-ev-item">
-      <div class="cev-info">
-        <div class="cev-name">${c.n}</div>
-        <div class="cev-sub">${c.t||'–'} ｜ ${c.r||'–'}</div>
-      </div>
+      <div class="cev-info"><div class="cev-name">${c.n}</div><div class="cev-sub">${c.t||'–'} ｜ ${c.r||'–'}</div></div>
       <button class="cev-del" onclick="deleteFromSheet('${c.id}')">×</button>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
 function deleteFromSheet(id){
-  if(sel===null) return;
-  const key=`${curM}-${sel}`;
-  if(customEvs[key]){
-    customEvs[key]=customEvs[key].filter(e=>e.id!==id);
-    if(customEvs[key].length===0) delete customEvs[key];
-    saveAll(); renderSheetCustomEvs();
-  }
+  if(sel===null) return; const key=`${curM}-${sel}`;
+  if(customEvs[key]){ customEvs[key]=customEvs[key].filter(e=>e.id!==id); if(customEvs[key].length===0) delete customEvs[key]; saveAll(); renderSheetCustomEvs(); }
 }
 
 function addCustomEv(){
-  if(sel===null) return;
-  const name=document.getElementById('fName').value.trim();
-  if(!name){document.getElementById('fName').focus();return;}
-  const time=document.getElementById('fTime').value.trim();
-  const room=document.getElementById('fRoom').value.trim();
-  const key=`${curM}-${sel}`;
-  if(!customEvs[key]) customEvs[key]=[];
-  customEvs[key].push({id:Date.now().toString(36), n:name, t:time, r:room});
-  saveAll();
-  document.getElementById('fName').value='';
-  document.getElementById('fTime').value='';
-  document.getElementById('fRoom').value='';
-  renderSheetCustomEvs();
+  if(sel===null) return; const name=document.getElementById('fName').value.trim(); if(!name){document.getElementById('fName').focus();return;}
+  const time=document.getElementById('fTime').value.trim(), room=document.getElementById('fRoom').value.trim(), key=`${curM}-${sel}`;
+  if(!customEvs[key]) customEvs[key]=[]; customEvs[key].push({id:Date.now().toString(36), n:name, t:time, r:room});
+  saveAll(); document.getElementById('fName').value=''; document.getElementById('fTime').value=''; document.getElementById('fRoom').value=''; renderSheetCustomEvs();
 }
 
 render();
 
-function closeDisclaimer(){
-  document.getElementById('disclaimer').style.display='none';
-  try { localStorage.setItem('cal_disclaimer_seen','1'); } catch {}
-}
-try {
-  if(localStorage.getItem('cal_disclaimer_seen')==='1'){
-    document.getElementById('disclaimer').style.display='none';
-  }
-} catch {}
+function closeDisclaimer(){ document.getElementById('disclaimer').style.display='none'; try { localStorage.setItem('cal_disclaimer_seen','1'); } catch {} }
+try { if(localStorage.getItem('cal_disclaimer_seen')==='1'){ document.getElementById('disclaimer').style.display='none'; } } catch {}
 </script>
 </body>
 </html>
