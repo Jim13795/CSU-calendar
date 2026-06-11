@@ -7,17 +7,24 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg:#0f0f14; --surface:#1a1a24; --surface2:#22222f; --border:#2e2e40;
+    --bg:#0f0f14; --surface:rgba(26, 26, 36, 0.75); --surface2:rgba(34, 34, 47, 0.75); --border:rgba(46, 46, 64, 0.5);
     --accent:#7c6cfc; --accent2:#fc6c8f;
-    --text:#e8e8f0; --muted:#6060a0;
+    --text:#e8e8f0; --muted:#8080c0;
     --work:#4a90d9; --rest:#4ecb8d; --school:#b07cfc; --red:#fc6c8f;
     --lunar-yi:#4ecb8d; --lunar-ji:#fc6c8f;
   }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;max-width:430px;margin:0 auto;overflow-x:hidden}
+  body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;max-width:430px;margin:0 auto;overflow-x:hidden;position:relative}
 
-  /* ── Header ── */
-  .hdr{padding:20px 20px 0;position:sticky;top:0;z-index:100;background:var(--bg)}
+  /* ── 動態氣象畫布背景 ── */
+  #weather-canvas {
+    position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 430px; height: 100vh;
+    z-index: -1; pointer-events: none; transition: background 1s ease;
+  }
+
+  /* ── 毛玻璃卡片優化 ── */
+  .hdr{padding:20px 20px 0;position:sticky;top:0;z-index:100;background:rgba(15,15,20,0.4);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
   .hdr-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
   .title{font-size:11px;font-weight:700;letter-spacing:3px;color:var(--muted)}
   .badge{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px}
@@ -25,7 +32,7 @@
   .mtitle{text-align:center}
   .mname{font-size:28px;font-weight:900;letter-spacing:-1px}
   .yname{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:2px}
-  .nbtn{width:40px;height:40px;border-radius:50%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;user-select:none;transition:all .15s}
+  .nbtn{width:40px;height:40px;border-radius:50%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;user-select:none;transition:all .15s;backdrop-filter:blur(10px)}
   .nbtn:active{transform:scale(.88)}
 
   /* ── Legend ── */
@@ -42,15 +49,15 @@
   .cal{display:grid;grid-template-columns:repeat(7,1fr);padding:0 10px;gap:3px;animation:fi .25s ease}
   @keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
-  .c{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;cursor:pointer;transition:transform .12s;padding:2px;overflow:hidden}
+  .c{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;cursor:pointer;transition:transform .12s;padding:2px;overflow:hidden;backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
   .c:active{transform:scale(.85)}
-  .c.empty{cursor:default}
-  .c.work{background:rgba(252,108,143,.15)}
-  .c.rest{background:rgba(78,203,141,.15)}
-  .c.school{background:rgba(74,144,217,.15);outline:2px solid rgba(74,144,217,.5);outline-offset:-2px}
-  .c.override-work{background:rgba(252,108,143,.15);outline:2px solid rgba(248,169,75,.6);outline-offset:-2px}
-  .c.override-rest{background:rgba(78,203,141,.15);outline:2px solid rgba(248,169,75,.6);outline-offset:-2px}
-  .c.holiday{background:rgba(255,200,0,.18);outline:2px solid rgba(255,200,0,.6);outline-offset:-2px}
+  .c.empty{cursor:default;backdrop-filter:none}
+  .c.work{background:rgba(252,108,143,.1)}
+  .c.rest{background:rgba(78,203,141,.1)}
+  .c.school{background:rgba(74,144,217,.1);outline:2px solid rgba(74,144,217,.4);outline-offset:-2px}
+  .c.override-work{background:rgba(252,108,143,.1);outline:2px solid rgba(248,169,75,.5);outline-offset:-2px}
+  .c.override-rest{background:rgba(78,203,141,.1);outline:2px solid rgba(248,169,75,.5);outline-offset:-2px}
+  .c.holiday{background:rgba(255,200,0,.12);outline:2px solid rgba(255,200,0,.5);outline-offset:-2px}
   .c.today .dn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-radius:50%;width:27px;height:27px;display:flex;align-items:center;justify-content:center;font-weight:700}
   .c.sel{border:1.5px solid var(--accent)}
   .dn{font-size:14px;font-weight:500;width:27px;height:27px;display:flex;align-items:center;justify-content:center}
@@ -62,13 +69,13 @@
 
   /* ── Summary ── */
   .sum{display:flex;padding:10px 18px;gap:8px;margin-top:6px}
-  .chip{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:10px 6px;text-align:center}
+  .chip{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:10px 6px;text-align:center;backdrop-filter:blur(10px)}
   .cn{font-size:20px;font-weight:900;font-family:'DM Mono',monospace;line-height:1}
   .cl{font-size:10px;color:var(--muted);margin-top:3px;font-weight:500}
 
   /* ── Detail panel ── */
   .divline{height:1px;background:var(--border);margin:0 10px}
-  .panel{margin:12px 10px 0;background:var(--surface);border-radius:18px;border:1px solid var(--border);overflow:hidden}
+  .panel{margin:12px 10px 0;background:var(--surface);border-radius:18px;border:1px solid var(--border);overflow:hidden;backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px)}
   .phdr{padding:13px 16px 10px;display:flex;align-items:center;border-bottom:1px solid var(--border);gap:8px}
   .pdate{font-size:13px;font-weight:700;flex:1}
   .pcnt{font-size:11px;color:var(--muted)}
@@ -83,6 +90,17 @@
   .lunar-tag.ji{background:var(--lunar-ji)}
   .lunar-text{color:var(--text);font-weight:500;letter-spacing:0.5px}
 
+  /* 天氣預報時段外殼 */
+  .weather-timeline-box {background:var(--surface2);padding:12px 16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
+  .weather-tl-title {font-size:11px;color:var(--muted);font-weight:700;letter-spacing:1px}
+  .weather-tl-scroll {display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
+  .weather-tl-scroll::-webkit-scrollbar {display:none}
+  .weather-tl-item {display:flex;flex-direction:column;align-items:center;min-width:55px;background:rgba(15,15,20,0.4);border:1px solid var(--border);border-radius:10px;padding:6px 4px;gap:3px}
+  .wtl-time {font-size:10px;font-family:'DM Mono',monospace;color:var(--muted)}
+  .wtl-icon {font-size:16px;line-height:1}
+  .wtl-temp {font-size:12px;font-weight:700;font-family:'DM Mono',monospace}
+  .wtl-pop {font-size:8px;color:#4a90d9;font-weight:500}
+
   .evs{padding:6px 0}
   .ev{display:flex;align-items:flex-start;padding:10px 16px;gap:12px}
   .ebar{width:3px;min-height:36px;border-radius:2px;flex-shrink:0;margin-top:2px}
@@ -91,25 +109,17 @@
   .esub{font-size:11px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace;line-height:1.7}
   .etag{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap}
   
-  /* 鬧鐘按鈕 */
   .alarm-btn{background:none;border:none;color:var(--muted);font-size:15px;cursor:pointer;padding:6px;line-height:1;align-self:center;transition:color .15s}
   .alarm-btn:hover, .alarm-btn:active{color:#ffb703}
-
   .del-btn{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:4px;line-height:1;align-self:center}
   .del-btn:active{color:var(--red)}
   .nomsg{padding:22px 16px;text-align:center;color:var(--muted);font-size:13px}
-  
-  .weather-bar{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface2)}
-  .weather-icon{font-size:24px;line-height:1}
-  .weather-info{flex:1}
-  .weather-temp{font-size:15px;font-weight:700;font-family:'DM Mono',monospace}
-  .weather-desc{font-size:11px;color:var(--muted);margin-top:2px}
-  .weather-loading{font-size:12px;color:var(--muted);padding:10px 16px;border-bottom:1px solid var(--border)}
+  .weather-loading{font-size:11px;color:var(--muted);padding:12px 16px;background:var(--surface2);border-bottom:1px solid var(--border)}
 
   /* ── Bottom sheet ── */
   .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;opacity:0;pointer-events:none;transition:opacity .25s;backdrop-filter:blur(4px)}
   .overlay.show{opacity:1;pointer-events:all}
-  .sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:100%;max-width:430px;background:var(--surface);border-radius:24px 24px 0 0;border-top:1px solid var(--border);z-index:201;transition:transform .3s cubic-bezier(.32,0,.67,0);padding-bottom:env(safe-area-inset-bottom,16px)}
+  .sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:100%;max-width:430px;background:var(--surface);border-radius:24px 24px 0 0;border-top:1px solid var(--border);z-index:201;transition:transform .3s cubic-bezier(.32,0,.67,0);padding-bottom:env(safe-area-inset-bottom,16px);backdrop-filter:blur(25px)}
   .sheet.show{transform:translateX(-50%) translateY(0)}
   .sheet-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 0}
   .sheet-title{font-size:15px;font-weight:700;padding:16px 20px 4px;display:flex;align-items:center;gap:8px}
@@ -117,7 +127,6 @@
   .sheet-section{padding:12px 20px 0}
   .section-label{font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);margin-bottom:10px;text-transform:uppercase}
 
-  /* Toggle work/rest */
   .toggle-row{display:flex;gap:8px}
   .toggle-opt{flex:1;padding:12px;border-radius:14px;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;text-align:center;transition:all .15s;user-select:none}
   .toggle-opt:active{transform:scale(.95)}
@@ -127,11 +136,9 @@
   .toggle-opt .opt-label{font-size:12px;font-weight:700}
   .toggle-opt .opt-sub{font-size:10px;color:var(--muted);margin-top:2px}
 
-  /* Reset override */
   .reset-btn{display:block;width:100%;margin-top:8px;padding:10px;background:none;border:1px solid var(--border);border-radius:12px;color:var(--muted);font-size:12px;cursor:pointer;font-family:'Noto Sans TC',sans-serif;transition:all .15s}
   .reset-btn:active{background:var(--surface2)}
 
-  /* Add event form */
   .form-row{display:flex;flex-direction:column;gap:8px;margin-bottom:4px}
   .finput{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:11px 14px;color:var(--text);font-size:13px;font-family:'Noto Sans TC',sans-serif;width:100%;outline:none;transition:border .15s}
   .finput:focus{border-color:var(--accent)}
@@ -140,7 +147,6 @@
   .add-btn{width:100%;margin-top:10px;padding:13px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:14px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans TC',sans-serif;transition:opacity .15s}
   .add-btn:active{opacity:.8}
 
-  /* Custom events list in sheet */
   .custom-ev-list{margin-top:6px;display:flex;flex-direction:column;gap:6px}
   .custom-ev-item{display:flex;align-items:center;gap:10px;background:var(--surface2);border-radius:12px;padding:10px 14px;border:1px solid var(--border)}
   .custom-ev-item .cev-info{flex:1;min-width:0}
@@ -152,7 +158,6 @@
   .sheet-close{position:absolute;top:14px;right:20px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);width:28px;height:28px;border-radius:50%;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
   .bot{height:40px}
 
-  /* ── Disclaimer modal ── */
   .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(6px)}
   .modal{background:var(--surface);border:1px solid var(--border);border-radius:24px;max-width:360px;width:100%;padding:28px 24px;animation:pop .3s cubic-bezier(.34,1.56,.64,1)}
   @keyframes pop{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
@@ -166,13 +171,15 @@
 </head>
 <body>
 
+<canvas id="weather-canvas"></canvas>
+
 <div class="modal-overlay" id="disclaimer">
   <div class="modal">
     <div class="modal-icon">🤖</div>
     <div class="modal-title">使用前請注意</div>
     <div class="modal-body">
       本日曆由 <strong>AI 輔助製作</strong>，課程時間與上班排班資訊僅供參考。<br><br>
-      若發現任何錯誤或資料有誤，請多多包涵，<br>並請通知製作人進行修正。<br><br>
+      若發現資料有誤，請多多包涵，並請通知製作人修正。<br><br>
       <strong>感謝您的使用！</strong>
     </div>
     <button class="modal-btn" onclick="closeDisclaimer()">我知道了</button>
@@ -346,14 +353,13 @@ const today=new Date();
 let curM=today.getMonth()+1, sel=null;
 
 // ══════════════════════════════════════════
-// 鬧鐘行事曆 ICS 匯出功能
+// 鬧鐘行事曆 ICS 功能
 // ══════════════════════════════════════════
 function addAlarmToCalendar(title, timeStr, room, m, d) {
   let startHour = 8, startMin = 0, endHour = 17, endMin = 0;
   if (timeStr && timeStr.includes('–')) {
     const parts = timeStr.split('–');
-    const sParts = parts[0].split(':');
-    const eParts = parts[1].split(':');
+    const sParts = parts[0].split(':'); const eParts = parts[1].split(':');
     if(sParts.length === 2) { startHour = parseInt(sParts[0]); startMin = parseInt(sParts[1]); }
     if(eParts.length === 2) { endHour = parseInt(eParts[0]); endMin = parseInt(eParts[1]); }
   } else if (title.includes('正常出勤')) {
@@ -406,48 +412,173 @@ function renderLunar(m, d) {
 }
 
 // ══════════════════════════════════════════
-// 高雄即時天氣 API
+// 氣象分時數據系統 & 動態桌布引擎
 // ══════════════════════════════════════════
-const WEATHER_CACHE = {};
+let HOURLY_WEATHER_CACHE = null; 
 const WMO_CODE = {
-  0:'☀️ 晴天',1:'🌤️ 大致晴朗',2:'⛅ 部分多雲',3:'☁️ 陰天',
-  45:'🌫️ 霧',48:'🌫️ 霜霧',51:'🌦️ 毛毛雨',53:'🌦️ 毛毛雨',55:'🌦️ 毛毛雨',
-  61:'🌧️ 小雨',63:'🌧️ 中雨',65:'🌧️ 大雨',71:'🌨️ 小雪',73:'🌨️ 中雪',75:'🌨️ 大雪',
-  80:'🌦️ 陣雨',81:'🌧️ 陣雨',82:'⛈️ 強陣雨',95:'⛈️ 雷雨',96:'⛈️ 雷雨夾冰雹',99:'⛈️ 雷雨夾冰雹',
+  0:'☀️ 晴天',1:'🌤️ 晴朗',2:'⛅ 多雲',3:'☁️ 陰天',
+  45:'🌫️ 霧',48:'🌫️ 霧',51:'🌦️ 雨',53:'🌦️ 雨',55:'🌦️ 雨',
+  61:'🌧️ 小雨',63:'🌧️ 中雨',65:'🌧️ 大雨',80:'🌦️ 陣雨',81:'🌧️ 陣雨',95:'⛈️ 雷雨'
 };
 
-async function fetchWeather(m, d){
-  const key = `${m}-${d}`; if(WEATHER_CACHE[key]) return WEATHER_CACHE[key];
-  try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=22.63&longitude=120.27&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code&timezone=Asia%2FTaipei`;
-    const res = await fetch(url); if(!res.ok) return null;
-    const data = await res.json();
-    if(data.current){
-      const result = { code: data.current.weather_code, temp: Math.round(data.current.temperature_2m), feel: Math.round(data.current.apparent_temperature), humidity: data.current.relative_humidity_2m };
-      WEATHER_CACHE[key] = result; return result;
+// Canvas 動態背景設定
+const canvas = document.getElementById('weather-canvas');
+const ctx = canvas.getContext('2d');
+let particles = [];
+let currentWeatherType = 'clear'; // clear, cloudy, rain
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth > 430 ? 430 : window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+class Particle {
+  constructor(type) {
+    this.type = type;
+    this.reset();
+  }
+  reset() {
+    this.x = Math.random() * canvas.width;
+    if (this.type === 'rain') {
+      this.y = Math.random() * -canvas.height;
+      this.vy = Math.random() * 8 + 8;
+      this.vx = Math.random() * 0.5 - 0.25;
+      this.len = Math.random() * 15 + 10;
+    } else if (this.type === 'cloudy') {
+      this.y = Math.random() * canvas.height;
+      this.vx = Math.random() * 0.3 + 0.1;
+      this.vy = Math.random() * 0.1 - 0.05;
+      this.radius = Math.random() * 40 + 20;
+    } else { // clear
+      this.y = Math.random() * canvas.height;
+      this.vx = Math.random() * 0.2 - 0.1;
+      this.vy = Math.random() * -0.3 - 0.1;
+      this.radius = Math.random() * 2 + 1;
     }
-  } catch(e) {}
-  return null;
+    this.alpha = Math.random() * 0.4 + 0.1;
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    if (this.type === 'rain' && this.y > canvas.height) this.reset();
+    if (this.type === 'cloudy' && this.x - this.radius > canvas.width) this.x = -this.radius;
+    if (this.type === 'clear' && this.y < 0) this.reset();
+  }
+  draw() {
+    ctx.beginPath();
+    ctx.fillStyle = `rgba(232, 232, 240, ${this.alpha})`;
+    if (this.type === 'rain') {
+      ctx.strokeStyle = `rgba(156, 192, 255, ${this.alpha})`;
+      ctx.lineWidth = 1.5;
+      ctx.moveTo(this.x, this.y);
+      ctx.lineTo(this.x + this.vx, this.y + this.len);
+      ctx.stroke();
+    } else if (this.type === 'cloudy') {
+      ctx.fillStyle = `rgba(96, 96, 120, ${this.alpha * 0.3})`;
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = `rgba(252, 200, 0, ${this.alpha})`;
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
 }
 
-function renderWeather(m, d){
-  const bar = document.getElementById('weather-bar'); if(!bar) return;
-  bar.innerHTML = '<div class="weather-loading">🌐 載入即時天氣中...</div>';
-  fetchWeather(m, d).then(w => {
-    if(!w){ bar.innerHTML=''; return; }
-    const desc = WMO_CODE[w.code] || '🌡️ 未知';
-    bar.innerHTML = `<div class="weather-bar">
-      <div class="weather-icon">${desc.split(' ')[0]}</div>
-      <div class="weather-info">
-        <div class="weather-temp">現在溫度 ${w.temp}°C ｜ 體感 ${w.feel}°C</div>
-        <div class="weather-desc">${desc.split(' ').slice(1).join(' ')} ｜ 濕度 ${w.humidity}% ｜ 高雄即時天氣</div>
-      </div>
-    </div>`;
+function initWeatherTheme(type) {
+  currentWeatherType = type;
+  particles = [];
+  let numParticles = type === 'rain' ? 60 : (type === 'cloudy' ? 15 : 25);
+  for (let i = 0; i < numParticles; i++) {
+    particles.push(new Particle(type));
+  }
+  // 漸層背景色平滑切換
+  if (type === 'rain') canvas.style.background = 'linear-gradient(to bottom, #11141e, #1a2230)';
+  else if (type === 'cloudy') canvas.style.background = 'linear-gradient(to bottom, #13131c, #1e1e2f)';
+  else canvas.style.background = 'linear-gradient(to bottom, #0f0f14, #191428)';
+}
+
+function animate() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  particles.forEach(p => {
+    p.update();
+    p.draw();
+  });
+  requestAnimationFrame(animate);
+}
+initWeatherTheme('clear');
+animate();
+
+async function fetchHourlyWeatherForecast() {
+  if (HOURLY_WEATHER_CACHE) return HOURLY_WEATHER_CACHE;
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=22.63&longitude=120.27&hourly=temperature_2m,apparent_temperature,precipitation_probability,weather_code&timezone=Asia%2FTaipei`;
+    const res = await fetch(url); if (!res.ok) return null;
+    HOURLY_WEATHER_CACHE = await res.json(); return HOURLY_WEATHER_CACHE;
+  } catch (e) { return null; }
+}
+
+function renderWeather(m, d) {
+  const bar = document.getElementById('weather-bar'); if (!bar) return;
+  bar.innerHTML = '<div class="weather-loading">🌐 正在讀取時段天氣預報...</div>';
+  
+  const pad = num => String(num).padStart(2, '0');
+  const targetDateStr = `2026-${pad(m)}-${pad(d)}`;
+
+  fetchHourlyWeatherForecast().then(data => {
+    if (!data || !data.hourly) {
+      bar.innerHTML = '<div class="weather-loading">排班日曆預覽中</div>';
+      initWeatherTheme('clear');
+      return;
+    }
+
+    const times = data.hourly.time;
+    let htmlScrollItems = '';
+    let primaryCode = 0;
+
+    for (let i = 0; i < times.length; i++) {
+      if (times[i].startsWith(targetDateStr)) {
+        const hour = parseInt(times[i].split('T')[1].split(':')[0]);
+        if (hour === 12) primaryCode = data.hourly.weather_code[i]; // 抽樣中午天氣代表今日背景
+        
+        if (hour % 3 === 0) {
+          const temp = Math.round(data.hourly.temperature_2m[i]);
+          const pop = data.hourly.precipitation_probability[i];
+          const code = data.hourly.weather_code[i];
+          const desc = WMO_CODE[code] || '⛅ 多雲';
+
+          htmlScrollItems += `
+            <div class="weather-tl-item">
+              <span class="wtl-time">${pad(hour)}:00</span>
+              <span class="wtl-icon">${desc.split(' ')[0]}</span>
+              <span class="wtl-temp">${temp}°</span>
+              <span class="wtl-pop">💧${pop}%</span>
+            </div>`;
+        }
+      }
+    }
+
+    // 依氣象狀態切換全景動態桌布
+    if ([51,53,55,61,63,65,80,81,95].includes(primaryCode)) initWeatherTheme('rain');
+    else if ([2,3,45,48].includes(primaryCode)) initWeatherTheme('cloudy');
+    else initWeatherTheme('clear');
+
+    if (!htmlScrollItems) {
+      bar.innerHTML = '<div class="weather-loading">📅 僅支援當週前後日期精準時段預報</div>';
+    } else {
+      bar.innerHTML = `
+        <div class="weather-timeline-box">
+          <div class="weather-tl-title">高雄分時天氣預報 (體感與降雨率)</div>
+          <div class="weather-tl-scroll">${htmlScrollItems}</div>
+        </div>`;
+    }
   });
 }
 
 // ══════════════════════════════════════════
-// 畫面渲染主邏輯 (修正完畢)
+// 畫面渲染主邏輯
 // ══════════════════════════════════════════
 function render(){
   document.getElementById('mname').textContent=MN[curM-1];
@@ -554,6 +685,7 @@ function resetPanel(){
   document.getElementById('pdate').textContent='請點選日期'; document.getElementById('pcnt').textContent='';
   document.getElementById('evs').innerHTML='<div class="nomsg">點選日期查看行程</div>';
   document.getElementById('weather-bar').innerHTML=''; document.getElementById('lunar-box').style.display='none'; document.getElementById('editBtn').style.display='none';
+  initWeatherTheme('clear');
 }
 
 function go(delta){ curM=Math.max(1,Math.min(12,curM+delta)); sel=null; resetPanel(); render(); }
